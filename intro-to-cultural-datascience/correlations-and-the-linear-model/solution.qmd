@@ -1,0 +1,245 @@
+---
+title: "Cultural Data Science: Assignment 2 Solution"
+format: html
+editor: visual
+---
+
+## Part 1
+
+### Setup
+
+Load required libraries
+
+```{r}
+library(dslabs)
+library(car)
+library(ggplot2)
+library(dplyr)
+```
+
+Load dataset
+
+```{r}
+data(divorce_margarine)
+```
+
+### Analysis
+
+Calculate correlation
+
+```{r}
+cor(divorce_margarine$margarine_consumption_per_capita,
+                  divorce_margarine$divorce_rate_maine)
+```
+
+Visualize with scatter plot and regression line
+
+```{r}
+ggplot(divorce_margarine, aes(x = margarine_consumption_per_capita, 
+                                   y = divorce_rate_maine)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE) +
+  labs(title = "Correlation between Margarine Consumption and Divorce Rates in Maine",
+       x = "Margarine Consumption per Capita",
+       y = "Divorce Rate in Maine") +
+  theme_minimal()
+```
+
+### Discussion
+
+*Would an increase in the preference for margarine lead to skyrocketing divorce rates?*
+
+The correlation coefficient between margarine consumption and divorce rates in Maine is extremely high (r = 0.993), suggesting a very strong positive relationship. However, this is a perfect example of why we must remember that correlation does not imply causation.
+
+This is a spurious correlation, where two variables appear to be related but have no meaningful causal connection. Both trends might be independently influenced by other societal changes during the same time period.
+
+## Part 2
+
+Load data
+
+```{r}
+data(GSSvocab)
+```
+
+Filter for the year 1978 and remove rows with missing values
+
+```{r}
+vocab_data <- GSSvocab %>%
+  filter(year == 1978) %>%
+  na.exclude()
+```
+
+### Analysis 1: Vocabulary \~ Education 
+
+```{r}
+ggplot(vocab_data, aes(x = educ, y = vocab)) +
+  # Replace geom_point with geom_count
+  geom_count(aes(size = after_stat(n)), alpha = 0.6) +
+  geom_smooth(method = "lm", se = TRUE, color = "steelblue") +
+  # Add size scale
+  scale_size_area(max_size = 6, name = "Number of\nObservations") +
+  labs(title = "Relationship between Education and Vocabulary Score",
+       subtitle = "Point size indicates number of observations at each combination",
+       x = "Years of Education",
+       y = "Vocabulary Score") +
+  theme_minimal() +
+  theme(legend.position = "right",
+        plot.title = element_text(face = "bold"),
+        plot.subtitle = element_text(size = 9))
+```
+
+**Model**
+
+Let's create the model
+
+```{r}
+model1 <- lm(vocab ~ educ, data = vocab_data)
+summary(model1)
+```
+
+The linear regression model examining the relationship between years of education and vocabulary scores shows a positive relationship. The model can be expressed as:
+
+Vocabulary Score = 1.2357 + 0.3925 × (Years of Education)
+
+This means:
+
+1.  Base Level (Intercept = 1.2357): This represents the theoretical vocabulary score for someone with zero years of education
+
+2.  Education Effect (Slope = 0.3925):
+
+    -   For each additional year of education, the vocabulary score increases by 0.3925 points
+    -   This effect is highly significant (p \< 2e-16)
+    -   The small standard error (0.016) indicates high precision in this estimate
+
+3.  Model Fit:
+
+    -   The model explains 28.8% of the variance in vocabulary scores (Adjusted R² = 0.2878)
+    -   The F-statistic (597.5, p \< 2.2e-16) indicates the model is significantly better than no model
+    -   Residuals range from -7.12 to 5.62, suggesting some notable outliers
+
+The positive slope aligns with our intuitive understanding that more years of formal education typically is associated with a broader vocabulary exposure and acquisition.
+
+However, as always we must keep in mind that correlation does not equal causation. These results, statistically speaking, indicate as much, that the education level attained depends on the vocabulary, as vice versa.
+
+### Analysis 2: Vocabulary \~ education + nativeBorn
+
+```{r}
+# Create faceted visualization with different colors
+ggplot(vocab_data, aes(x = educ, y = vocab)) +
+  # Add count-sized points with transparency
+  geom_count(aes(size = after_stat(n), color = nativeBorn), alpha = 0.6) +
+  # Add regression line matching point colors
+  geom_smooth(aes(color = nativeBorn), method = "lm", se = TRUE) +
+  # Facet by native speaker status
+  facet_wrap(~nativeBorn, labeller = labeller(nativeBorn = c("no" = "Non-native Speakers", "yes" = "Native Speakers"))) +
+  # Customize the size and color scales
+  scale_size_area(max_size = 6, name = "Number of\nObservations") +
+  scale_color_manual(values = c("no" = "orange", "yes" = "lightgreen"), guide = "none") +
+  labs(title = "Vocabulary Scores by Education and Native Speaker Status",
+       subtitle = "Point size indicates number of observations at each combination",
+       x = "Years of Education",
+       y = "Vocabulary Score") +
+  theme_minimal() +
+  # Improve theme elements
+  theme(legend.position = "right",
+        plot.title = element_text(face = "bold"),
+        plot.subtitle = element_text(size = 9),
+        strip.text = element_text(face = "bold"),
+        strip.background = element_rect(fill = "gray95", color = NA))
+```
+
+**Model**
+
+Let's create the model
+
+```{r}
+model2 <- lm(vocab ~ educ + nativeBorn, data = vocab_data)
+summary(model2)
+```
+
+Model 2 suggests both education and native speaker status are associated with vocabulary scores. The model can be expressed as:
+
+Vocabulary Score = 0.6280 + 0.3922 × (Years of Education) + 0.6503 × (Native Born)
+
+The model suggests the following:
+
+1.  Education Effect (0.3922):
+    -   The effect of education remains almost identical to model 1 (previously 0.3925)
+    -   Highly significant (p \< 2e-16) with a small standard error (0.016)
+    -   This consistency suggests that education's effect is robust even when controlling for native speaker status
+2.  Native Speaker Effect (0.6503):
+    -   Being native born increases the vocabulary score by approximately 0.65 points
+    -   This effect is statistically significant (p = 0.00159)
+    -   The standard error (0.206) indicates good precision in this estimate
+    -   The advantage is equivalent to about 1.7 years of education (0.6503/0.3922)
+3.  Base Level (Intercept = 0.6280):
+    -   This represents the predicted vocabulary score for a non-native speaker with zero years of education
+4.  Model Fit:
+    -   Explains 29.2% of variance (Adjusted R² = 0.2921), slightly better than model 1
+    -   Highly significant overall (F = 305.6, p \< 2.2e-16)
+    -   Residuals range from -7.16 to 5.80, similar to model 1
+    -   Adding native speaker status improved the model fit, but only marginally
+
+The model suggests that both education and native speaker status contribute to vocabulary knowledge, with native speakers having a considerable advantage equivalent to nearly two years of additional education. This also aligns with the intuition that native speakers obviously have an advantage in vocabulary measures.
+
+However, we must keep in mind the limitation of statistical modelling. The results are subject to the constraint defined in the modelling. If we assume that the slope associated with education also vary based on whether its a native born or not, the model does not allow for a varying slope.
+
+Another interesting note is that the data set is very imbalanced. It is clear from the visualization, that there a way more native born in the data set than non-native.
+
+### Analysis 3: Does education depend on whether they are natives?
+
+First, let's visualize the relationship between native status and education
+
+```{r}
+ggplot(vocab_data, aes(x = educ)) +
+  # Create density plots for each group
+  geom_density(aes(fill = nativeBorn), alpha = 0.5) +
+  # Customize colors and labels
+  scale_fill_manual(values = c("no" = "orange", "yes" = "lightgreen"),
+                   labels = c("Non-native Speakers", "Native Speakers"),
+                   name = "Speaker Status") +
+  labs(title = "Distribution of Education Years by Native Speaker Status",
+       x = "Years of Education",
+       y = "Density") +
+  theme_minimal() +
+  theme(legend.position = "right",
+        plot.title = element_text(face = "bold"))
+```
+
+Interestingly, the distribution shows that there is flatter distribution for non-native speakers, meaning that they either get less than average education, or more than average, compared to native speakers. This bimodal pattern might reflect different immigrant groups - perhaps those arriving with high educational qualifications (e.g., for skilled work or advanced studies) versus those with fewer educational opportunities.
+
+Native speakers have a large concentration around 12 years of total education, and is therefore a more homogeneous group in terms of level of education. This peak at 12 years likely corresponds to high school completion, which is a common educational milestone in the United States (the data set was distributed by National Opinion Research Center of the University of Chicago)
+
+**Model**
+
+Let's model an interaction effect:
+
+```{r}
+model3 <- lm(vocab ~ educ * nativeBorn, data = vocab_data)
+summary(model3)
+
+```
+
+The interaction model suggests the following:
+
+1.  Education Effect (0.41510):
+    -   For non-native speakers, each year of education increases vocabulary score by 0.415 points
+    -   This effect is highly significant (p \< 0.001)
+    -   The effect is slightly stronger than in our previous model without interaction
+2.  Native Speaker Effect (0.95000):
+    -   Being native-born appears to add 0.95 points to the vocabulary score
+    -   However, this effect is not statistically significant (p = 0.186)
+    -   This represents the difference at zero years of education
+3.  Interaction Term (-0.02501):
+    -   The negative coefficient suggests that the effect of education is slightly weaker for native speakers
+    -   However, this interaction is not statistically significant (p = 0.663)
+    -   The small coefficient (-0.025) indicates minimal practical difference in education's effect between groups
+4.  Model Fit:
+    -   The model explains about 29.3% of the variance in vocabulary scores (R² = 0.2932)
+    -   The overall model is highly significant (F-statistic p \< 2.2e-16)'
+
+### Conclusion
+
+Given these results, the interaction term does not appear to be necessary in the model. The non-significant interaction (p = 0.663) with a very small coefficient (-0.025) suggests that education affects vocabulary similarly for both native and non-native speakers. Therefore, model 2 (without interaction) would be more appropriate than model 3.
+
+The principle of parsimony might suggest using the even simpler model 1 (education only). However the native speaker variable in model 2 is both statistically significant (p = 0.00159) and practically meaningful (effect equivalent to 1.7 years of education), while adding minimal complexity to the model. The stability of the education coefficient across models (approximately 0.39) also supports this choice, suggesting that model 2 captures an independent effect of native speaker status without disturbing the robust relationship between education and vocabulary.
