@@ -1,0 +1,52 @@
+---
+title: "CuDa Project"
+author: "Jonathan"
+date: "2024-12-01"
+output: html_document
+---
+
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(brms)
+library(rethinking)
+
+```
+
+
+```{r}
+d <- read.csv("data/lejemaal.csv")
+
+```
+
+```{r}
+
+d <- d[is.finite(d$net_price_per_sqm), ]
+d <- d[is.finite(d$area), ]
+d$postal_code <- as.factor(d$postal_code)
+d$city <- as.factor(d$city)
+
+```
+
+
+```{r}
+
+
+model <- lm(net_price_per_sqm ~ area + deposit + city, d)
+
+summary(model)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
