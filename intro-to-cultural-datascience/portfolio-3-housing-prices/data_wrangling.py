@@ -55,10 +55,44 @@ mask = data[critical_columns].gt(0).all(axis=1)
 data = data[mask]
 print("Rows after removed zero values:", data.shape[0])
 
-
 # Add price per square meter calculations
 data["net_price_per_sqm"] = (data["net_rent"] / data["area"]).round(2)
 data["gross_price_per_sqm"] = (data["gross_rent"] / data["area"]).round(2)
+
+
+# Look for unusually low prices per square meter
+price_per_sqm_threshold = 40  # DKK
+low_price_cases = data[data["net_price_per_sqm"] < price_per_sqm_threshold]
+low_rent_cases = data[data["net_rent"] < 1000]
+
+print("\nUnusually low price per square meter cases:")
+print(
+    f"Found {len(low_price_cases + low_rent_cases)} entries with price/m² below {price_per_sqm_threshold} or withrent below 1000 DKK"
+)
+print("\nExample cases:")
+print(
+    low_price_cases[
+        [
+            "net_price_per_sqm",
+            "area",
+            "net_rent",
+            "address",
+            "property_type",
+            "apartment_type",
+        ]
+    ].head(5)
+)
+
+# Remove unrealistic rent prices
+print("Rows before removing unrealistic rents:", data.shape[0])
+rent_mask = (
+    (data["net_rent"] >= 1000)
+    & (data["gross_rent"] >= 1000)
+    & (data["net_price_per_sqm"] >= 40)
+)
+data = data[rent_mask]
+print("Rows after removing unrealistic rents:", data.shape[0])
+
 
 # Split postal code and city into separate columns
 data["postal_code"] = data["postal_code_and_city"].str.extract(r"(\d{4})")
@@ -68,7 +102,7 @@ data = data.drop("postal_code_and_city", axis=1)
 # Export cleaned data to CSV
 data.to_csv("data/lejemaal.csv", index=False)
 
-# Look for unusual entries (tiny apartments or very expensive ones)
+# Look for unusual entries (unrealistically tiny apartments or very expensive ones)
 print("\nUnusual entries in the dataset:")
 area_threshold = 10  # m²
 rent_threshold = 20000  # DKK
