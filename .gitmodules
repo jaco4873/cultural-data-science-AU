@@ -4,3 +4,6 @@
 [submodule "visual-analytics"]
 	path = visual-analytics
 	url = https://github.com/jaco4873/cds-visual-analytics-2025.git
+[submodule "spatial-analytics"]
+	path = spatial-analytics
+	url = https://github.com/jaco4873/cds-spatial-analytics-2025.git
