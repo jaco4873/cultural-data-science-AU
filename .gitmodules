@@ -1,0 +1,3 @@
+[submodule "language-analytics"]
+	path = language-analytics
+	url = https://github.com/jaco4873/cds-language-analytics-2025.git
